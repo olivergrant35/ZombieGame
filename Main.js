@@ -20,6 +20,9 @@ let config = {
 };
 
 let game = new Phaser.Game(config);
+let world;
+
+let running = true;
 
 let player;
 let playerSpeed = 200;
@@ -83,8 +86,8 @@ function create () {
     //Finding spawnpoint on the map, spawning player and spawnpoubt and adding collider to world layer. (e.g tree's and large stones)
     const spawnPoint = map.findObject("Objects", obj => obj.name === "Spawn Point");
     //player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, 'playerHandgun');
-    player = new Player(spawnPoint.x, spawnPoint.y);
-    this.physics.add.collider(player, worldLayer);
+    player = new Player(this, spawnPoint.x, spawnPoint.y);
+    this.physics.add.collider(player.sprite, worldLayer);
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group({
@@ -103,12 +106,12 @@ function create () {
 
     //Setting the world bounds and making the player and crosshair collide with them.
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    player.setCollideWorldBounds(true);
+    //player.setCollideWorldBounds(true);
     crosshair.setCollideWorldBounds(true);
 
     //Making the camera follow the player.
     const camera = this.cameras.main;
-    camera.startFollow(player);
+    camera.startFollow(player.sprite);
     camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
     //Creating the cursor object.
@@ -117,131 +120,134 @@ function create () {
     //mouse pointer code was taken from https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     // Locks pointer on mousedown
     game.canvas.addEventListener('mousedown', function () {
-        game.input.mouse.requestPointerLock();
+        if(running) {
+            game.input.mouse.requestPointerLock();
+        }
     });
 
     // Exit pointer lock when Q or escape (by default) is pressed.
     this.input.keyboard.on('keydown_Q', function (event) {
-        if (game.input.mouse.locked)
-            game.input.mouse.releasePointerLock();
+        if(running) {
+            if (game.input.mouse.locked)
+                game.input.mouse.releasePointerLock();
+        }
     }, 0, this);
 
     // Move crosshair upon locked pointer move
     this.input.on('pointermove', function (pointer) {
-        if (this.input.mouse.locked) {
-            crosshair.x += pointer.movementX;
-            crosshair.y += pointer.movementY;
+        if(running) {
+            if (this.input.mouse.locked) {
+                crosshair.x += pointer.movementX;
+                crosshair.y += pointer.movementY;
+            }
         }
     }, this);
 
+    this.input.keyboard.on('keydown_P', function (event){
+       running = !running;
+    });
+
     //Detecting mouse click, creating and shooting a bullet.
     this.input.on('pointerdown', function (pointer) {
-        console.log('BulletShot');
+        if(running) {
 
-        //Working out the x and y speed to move the bullet to the crosshair location.
-        let dx = crosshair.x - player.x;
-        let dy = crosshair.y - player.y;
-        let angle = Math.atan2(dy, dx);
-        let xSpeed = bulletSpeed * Math.cos(angle);
-        let ySpeed = bulletSpeed * Math.sin(angle);
-
-        //Creating the buller and giving it the correct speed.
-        let bullet = bullets.create(player.x, player.y, 'bullet').setVelocity(xSpeed, ySpeed);
+        }
     }, this);
 
     console.log("Create Complete");
 }
 
     function update() {
-        player.setVelocity(0);
+        player.sprite.setVelocity(0);
+        if (running) {
+            //Rotates the player to face the crosshair.
+            player.sprite.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
 
-        //Rotates the player to face the crosshair.
-        player.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
-
-        if (cursors.left.isDown) {
-            player.body.setVelocityX(-playerSpeed);
-        }
-        else if (cursors.right.isDown) {
-            player.body.setVelocityX(playerSpeed);
-        }
-
-        if (cursors.up.isDown) {
-            player.body.setVelocityY(-playerSpeed);
-        }
-        else if (cursors.down.isDown) {
-            player.body.setVelocityY(playerSpeed);
-        }
-
-        //Checking to see if bullets have left the screen.
-        bullets.getChildren().forEach(bullet =>
-        {
-            if(bullet.body.x > map.widthInPixels || bullet.body.y > map.heightInPixels || bullet.body.y < 0 || bullet.body.x < 0)
-            {
-                 bullet.destroy();
+            if (cursors.left.isDown) {
+                player.sprite.body.setVelocityX(-playerSpeed);
             }
-        });
+            else if (cursors.right.isDown) {
+                player.sprite.body.setVelocityX(playerSpeed);
+            }
 
-        //Making the emitter visible when the player is moving.
-        if(player.body.velocity.x != 0 || player.body.velocity.y != 0)
-        {
-            emitter.visible = true;
-            emitter.setPosition(player.x, player.y);
+            if (cursors.up.isDown) {
+                player.sprite.body.setVelocityY(-playerSpeed);
+            }
+            else if (cursors.down.isDown) {
+                player.sprite.body.setVelocityY(playerSpeed);
+            }
+
+            //Checking to see if bullets have left the screen.
+            bullets.getChildren().forEach(bullet => {
+                if (bullet.body.x > map.widthInPixels || bullet.body.y > map.heightInPixels || bullet.body.y < 0 || bullet.body.x < 0) {
+                    bullet.destroy();
+                }
+            });
+
+            //Making the emitter visible when the player is moving.
+            if (player.sprite.body.velocity.x != 0 || player.sprite.body.velocity.y != 0) {
+                emitter.visible = true;
+                emitter.setPosition(player.sprite.x, player.sprite.y);
+            }
+            else {
+                emitter.visible = false;
+            }
+
+            //Updating enemy movement
+            enemies.getChildren().forEach(enemy => {
+                if (enemy.active == true && enemy.visible == true) {
+                    //Working out the x and y speed to move the bullet to the crosshair location.
+                    let dx = player.sprite.x - enemy.x;
+                    let dy = player.sprite.y - enemy.y;
+                    let angle = Math.atan2(dy, dx);
+                    let xSpeed = enemySpeed * Math.cos(angle);
+                    let ySpeed = enemySpeed * Math.sin(angle);
+
+                    enemy.body.velocity.x = xSpeed;
+                    enemy.body.velocity.y = ySpeed;
+                }
+            })
+
+            //Make it so the player cannot move faster when going in a diagonal.
+            player.sprite.body.velocity.normalize().scale(playerSpeed);
+
+            //Making the crosshair move with the player.
+            crosshair.body.velocity.x = player.sprite.body.velocity.x;
+            crosshair.body.velocity.y = player.sprite.body.velocity.y;
+
+            constrainCrosshair(crosshair, 275);
         }
         else
         {
+            //Game is paused so need to create a menu of sorts
+            crosshair.setVelocity(0);
             emitter.visible = false;
         }
-
-        //Updating enemy movement
-        enemies.getChildren().forEach(enemy =>
-        {
-            if(enemy.active == true && enemy.visible == true)
-            {
-                //Working out the x and y speed to move the bullet to the crosshair location.
-                let dx = player.x - enemy.x;
-                let dy = player.y - enemy.y;
-                let angle = Math.atan2(dy, dx);
-                let xSpeed = enemySpeed * Math.cos(angle);
-                let ySpeed = enemySpeed * Math.sin(angle);
-
-                enemy.body.velocity.x = xSpeed;
-                enemy.body.velocity.y = ySpeed;
-            }
-        })
-
-        //Make it so the player cannot move faster when going in a diagonal.
-        player.body.velocity.normalize().scale(playerSpeed);
-
-        //Making the crosshair move with the player.
-        crosshair.body.velocity.x = player.body.velocity.x;
-        crosshair.body.velocity.y = player.body.velocity.y;
-
-        constrainCrosshair(crosshair, 275);
     }
 
 //BELOW CODE WAS GOT FROM https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     function constrainCrosshair(crosshair, radius) {
-        let distX = crosshair.x - player.x; // X distance between player & crosshair
-        let distY = crosshair.y - player.y; // Y distance between player & crosshair
+        let distX = crosshair.x - player.sprite.x; // X distance between player & crosshair
+        let distY = crosshair.y - player.sprite.y; // Y distance between player & crosshair
 
         // Ensures crosshair cannot be moved crosshair
         if (distX > 800)
-            crosshair.x = player.x + 800;
+            crosshair.x = player.sprite.x + 800;
         else if (distX < -800)
-            crosshair.x = player.x - 800;
+            crosshair.x = player.sprite.x - 800;
 
         if (distY > 600)
-            crosshair.y = player.y + 600;
+            crosshair.y = player.sprite.y + 600;
         else if (distY < -600)
-            crosshair.y = player.y - 600;
+            crosshair.y = player.sprite.y - 600;
 
         // Ensures crosshair cannot be moved further than dist(radius) from player
-        let distBetween = Phaser.Math.Distance.Between(player.x, player.y, crosshair.x, crosshair.y);
+        let distBetween = Phaser.Math.Distance.Between(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
         if (distBetween > radius) {
             // Place crosshair on perimeter of circle on line intersecting player & crosshair
             let scale = distBetween / radius;
 
-            crosshair.x = player.x + (crosshair.x - player.x) / scale;
-            crosshair.y = player.y + (crosshair.y - player.y) / scale;
+            crosshair.x = player.sprite.x + (crosshair.x - player.sprite.x) / scale;
+            crosshair.y = player.sprite.y + (crosshair.y - player.sprite.y) / scale;
         }
     }
