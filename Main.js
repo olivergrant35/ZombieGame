@@ -22,6 +22,8 @@ let config = {
 let game = new Phaser.Game(config);
 let world;
 
+let keyInput;
+
 let running = true;
 
 let player;
@@ -160,6 +162,7 @@ function create () {
     function update() {
         player.sprite.setVelocity(0);
         if (running) {
+
             //Rotates the player to face the crosshair.
             player.sprite.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
 

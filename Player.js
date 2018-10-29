@@ -2,12 +2,11 @@ class Player
 {
     constructor(g, spawnX, spawnY) {
         const playerSprite = g.physics.add.sprite(spawnX, spawnY, 'playerHandgun');
-
         playerSprite.setCollideWorldBounds(true);
 
+        this.playerSpeed = 200;
+
         this.sprite = playerSprite;
-        console.log(game);
-        console.log(game.physics);
     }
 
     setVel(x, y)
@@ -18,21 +17,21 @@ class Player
 
     up()
     {
-
+        this.sprite.x -= playerSpeed;
     }
 
     down()
     {
-
+        this.sprite.x += playerSpeed;
     }
 
     left()
     {
-
+        this.sprite.y -= playerSpeed;
     }
 
     right()
     {
-
+        this.sprite.y += playerSpeed;
     }
 }
