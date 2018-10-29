@@ -19,15 +19,13 @@ let config = {
     }
 };
 
-let game = new Phaser.Game(config);
+let phaser = new Phaser.Game(config);
+let game;
 let world;
-
-let keyInput;
 
 let running = true;
 
 let player;
-let playerSpeed = 200;
 
 let crosshair;
 let cursors;
@@ -36,7 +34,6 @@ let map;
 let worldLayer;
 
 let bullets;
-let bulletSpeed = 500;
 let shootTime = 0;
 
 let enemies;
@@ -48,6 +45,8 @@ let emitter;
 function preload ()
 {
     console.log("Preload");
+
+    game = this;
 
     //Load the player, bullet and crosshair images.
     this.load.image('playerHandgun', 'assets/player/soldier_handgun.png');
@@ -92,9 +91,7 @@ function create () {
     this.physics.add.collider(player.sprite, worldLayer);
 
     //Creating bullets group and setting collider for the world layer.
-    bullets = this.physics.add.group({
-        maxSize: 30
-    });
+    bullets = this.physics.add.group();
     this.physics.add.collider(bullets, worldLayer);
 
     //Creating enemies group and setting collider for the world layer.
@@ -121,7 +118,7 @@ function create () {
 
     //mouse pointer code was taken from https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     // Locks pointer on mousedown
-    game.canvas.addEventListener('mousedown', function () {
+    phaser.canvas.addEventListener('mousedown', function () {
         if(running) {
             game.input.mouse.requestPointerLock();
         }
@@ -152,7 +149,12 @@ function create () {
     //Detecting mouse click, creating and shooting a bullet.
     this.input.on('pointerdown', function (pointer) {
         if(running) {
+            if(this.time.now > shootTime)
+            {
 
+
+                shootTime = this.time.now + 200;
+            }
         }
     }, this);
 
@@ -162,22 +164,21 @@ function create () {
     function update() {
         player.sprite.setVelocity(0);
         if (running) {
-
             //Rotates the player to face the crosshair.
             player.sprite.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
 
             if (cursors.left.isDown) {
-                player.sprite.body.setVelocityX(-playerSpeed);
+                player.left();
             }
             else if (cursors.right.isDown) {
-                player.sprite.body.setVelocityX(playerSpeed);
+                player.right();
             }
 
             if (cursors.up.isDown) {
-                player.sprite.body.setVelocityY(-playerSpeed);
+                player.up();
             }
             else if (cursors.down.isDown) {
-                player.sprite.body.setVelocityY(playerSpeed);
+                player.down();
             }
 
             //Checking to see if bullets have left the screen.
@@ -212,7 +213,7 @@ function create () {
             })
 
             //Make it so the player cannot move faster when going in a diagonal.
-            player.sprite.body.velocity.normalize().scale(playerSpeed);
+            player.sprite.body.velocity.normalize().scale(player.playerSpeed);
 
             //Making the crosshair move with the player.
             crosshair.body.velocity.x = player.sprite.body.velocity.x;

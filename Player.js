@@ -9,29 +9,23 @@ class Player
         this.sprite = playerSprite;
     }
 
-    setVel(x, y)
-    {
-        this.sprite.x = x;
-        this.sprite.y = y;
-    }
-
     up()
     {
-        this.sprite.x -= playerSpeed;
+        this.sprite.setVelocityY(-this.playerSpeed);
     }
 
     down()
     {
-        this.sprite.x += playerSpeed;
+        this.sprite.setVelocityY(this.playerSpeed);
     }
 
     left()
     {
-        this.sprite.y -= playerSpeed;
+        this.sprite.setVelocityX(-this.playerSpeed);
     }
 
     right()
     {
-        this.sprite.y += playerSpeed;
+        this.sprite.setVelocityX(this.playerSpeed);
     }
 }
