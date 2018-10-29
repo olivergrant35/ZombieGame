@@ -5,13 +5,24 @@ class Bullet
         this.xSeed = 0;
         this.ySpeed = 0;
         this.bulletSpeed = 500;
-        this.bullet = bullets.create(playerX, playerY, 'bullet').setVelocity(this.xSpeed, this.ySpeed).visible = false;
+        this.bullet = bullets.create(-1000, -1000, 'bullet').setVelocity(this.xSpeed, this.ySpeed).visible = false;
+        this.isUsed = false;
         console.log('Bullet Created');
     }
 
     shootBullet(playerX, playerY, crosshairX, crosshairY)
     {
+        this.calculateSpeed(playerX, playerY, crosshairX, crosshairY);
+        this.bullet.body.setVelocityX(this.xSpeed);
+        this.bullet.body.setVelocityY(this.ySpeed);
+        this.bullet.visible = true;
+        this.isUsed = true;
+    }
 
+    destroyBullet()
+    {
+        this.bullet.visible = false;
+        this.isUsed = false;
     }
 
     calculateSpeed(playerX, playerY, crosshairX, crosshairY, x)

@@ -22,25 +22,22 @@ let config = {
 let phaser = new Phaser.Game(config);
 let game;
 let world;
-
 let running = true;
-
 let player;
-
 let crosshair;
-let cursors;
-
 let map;
 let worldLayer;
-
 let bullets;
 let shootTime = 0;
-
 let enemies;
 let enemySpeed = 300;
-
 let particles;
 let emitter;
+
+let up;
+let down;
+let left;
+let right;
 
 function preload ()
 {
@@ -92,6 +89,9 @@ function create () {
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
+    for (let i = 0; i < 100; i++) {
+
+    }
     this.physics.add.collider(bullets, worldLayer);
 
     //Creating enemies group and setting collider for the world layer.
@@ -113,23 +113,16 @@ function create () {
     camera.startFollow(player.sprite);
     camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    //Creating the cursor object.
-    cursors = this.input.keyboard.createCursorKeys();
-
     //mouse pointer code was taken from https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     // Locks pointer on mousedown
     phaser.canvas.addEventListener('mousedown', function () {
-        if(running) {
-            game.input.mouse.requestPointerLock();
-        }
+        game.input.mouse.requestPointerLock();
     });
 
     // Exit pointer lock when Q or escape (by default) is pressed.
     this.input.keyboard.on('keydown_Q', function (event) {
-        if(running) {
-            if (game.input.mouse.locked)
-                game.input.mouse.releasePointerLock();
-        }
+        if (game.input.mouse.locked)
+            game.input.mouse.releasePointerLock();
     }, 0, this);
 
     // Move crosshair upon locked pointer move
@@ -151,12 +144,20 @@ function create () {
         if(running) {
             if(this.time.now > shootTime)
             {
-
-
+                bullets.getChildren().forEach(b => {
+                   if(!b.isUsed)
+                       b.shootBullet(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
+                });
                 shootTime = this.time.now + 200;
             }
         }
     }, this);
+
+    //Setting up WASD as the movment keys.
+    up = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    down = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
     console.log("Create Complete");
 }
@@ -167,24 +168,24 @@ function create () {
             //Rotates the player to face the crosshair.
             player.sprite.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
 
-            if (cursors.left.isDown) {
+            if (left.isDown) {
                 player.left();
             }
-            else if (cursors.right.isDown) {
+            else if (right.isDown) {
                 player.right();
             }
 
-            if (cursors.up.isDown) {
+            if (up.isDown) {
                 player.up();
             }
-            else if (cursors.down.isDown) {
+            else if (down.isDown) {
                 player.down();
             }
 
             //Checking to see if bullets have left the screen.
             bullets.getChildren().forEach(bullet => {
                 if (bullet.body.x > map.widthInPixels || bullet.body.y > map.heightInPixels || bullet.body.y < 0 || bullet.body.x < 0) {
-                    bullet.destroy();
+                    bullet.destroyBullet();
                 }
             });
 
