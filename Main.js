@@ -23,16 +23,21 @@ let phaser = new Phaser.Game(config);
 let game;
 let world;
 let running = true;
+let gameOver = false;
 let player;
 let crosshair;
 let map;
 let worldLayer;
 let bullets;
+let bulletSpeed = 500;
 let shootTime = 0;
+let shotInterval = 150;
 let enemies;
 let enemySpeed = 300;
 let particles;
 let emitter;
+
+let moneyText;
 
 let up;
 let down;
@@ -89,9 +94,6 @@ function create () {
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
-    for (let i = 0; i < 100; i++) {
-
-    }
     this.physics.add.collider(bullets, worldLayer);
 
     //Creating enemies group and setting collider for the world layer.
@@ -99,6 +101,7 @@ function create () {
 
     });
     this.physics.add.collider(enemies, worldLayer);
+    this.physics.add.collider(player.sprite, enemies, player.hitByEnemy(5), null, this);
 
     //Adding the crosshair to the screen.
     crosshair = this.physics.add.sprite(450, 300, 'crosshairImage');
@@ -136,7 +139,7 @@ function create () {
     }, this);
 
     this.input.keyboard.on('keydown_P', function (event){
-       running = !running;
+        running = !running;
     });
 
     //Detecting mouse click, creating and shooting a bullet.
@@ -144,11 +147,20 @@ function create () {
         if(running) {
             if(this.time.now > shootTime)
             {
-                bullets.getChildren().forEach(b => {
-                   if(!b.isUsed)
-                       b.shootBullet(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
-                });
-                shootTime = this.time.now + 200;
+                //Working out the x and y speed to move the bullet to the crosshair location.
+                let dx = crosshair.x - player.sprite.x;
+                let dy = crosshair.y - player.sprite.y;
+                let angle = Math.atan2(dy, dx);
+                this.xSpeed = bulletSpeed * Math.cos(angle);
+                this.ySpeed = bulletSpeed * Math.sin(angle);
+
+                bullets.create(player.sprite.x, player.sprite.y, 'bullet').setVelocity(this.xSpeed, this.ySpeed);
+
+                // bullets.getChildren().forEach(b => {
+                //    if(!b.isUsed)
+                //        b.shootBullet(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
+                // });
+                shootTime = this.time.now + shotInterval;
             }
         }
     }, this);
@@ -158,6 +170,8 @@ function create () {
     down = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+
+    moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money: 0', { fontSize: '40px', fill: '#ffffff'});
 
     console.log("Create Complete");
 }
@@ -185,7 +199,7 @@ function create () {
             //Checking to see if bullets have left the screen.
             bullets.getChildren().forEach(bullet => {
                 if (bullet.body.x > map.widthInPixels || bullet.body.y > map.heightInPixels || bullet.body.y < 0 || bullet.body.x < 0) {
-                    bullet.destroyBullet();
+                    bullet.destroy();
                 }
             });
 
@@ -201,7 +215,7 @@ function create () {
             //Updating enemy movement
             enemies.getChildren().forEach(enemy => {
                 if (enemy.active == true && enemy.visible == true) {
-                    //Working out the x and y speed to move the bullet to the crosshair location.
+                    //Working out the x and y speed to move the enemy to the player location.
                     let dx = player.sprite.x - enemy.x;
                     let dy = player.sprite.y - enemy.y;
                     let angle = Math.atan2(dy, dx);
@@ -216,9 +230,11 @@ function create () {
             //Make it so the player cannot move faster when going in a diagonal.
             player.sprite.body.velocity.normalize().scale(player.playerSpeed);
 
-            //Making the crosshair move with the player.
+            //Making the crosshair and score text move with the player.
             crosshair.body.velocity.x = player.sprite.body.velocity.x;
             crosshair.body.velocity.y = player.sprite.body.velocity.y;
+            moneyText.x = player.sprite.x - 390;
+            moneyText.y = player.sprite.y - 295;
 
             constrainCrosshair(crosshair, 275);
         }
@@ -228,7 +244,14 @@ function create () {
             crosshair.setVelocity(0);
             emitter.visible = false;
         }
+
+        //Game over
+        if(gameOver)
+        {
+
+        }
     }
+
 
 //BELOW CODE WAS GOT FROM https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     function constrainCrosshair(crosshair, radius) {

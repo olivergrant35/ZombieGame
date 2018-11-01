@@ -5,8 +5,9 @@ class Bullet
         this.xSeed = 0;
         this.ySpeed = 0;
         this.bulletSpeed = 500;
-        this.bullet = bullets.create(-1000, -1000, 'bullet').setVelocity(this.xSpeed, this.ySpeed).visible = false;
         this.isUsed = false;
+        this.bullet = bullets.create(-1000, -1000, 'bullet').setVelocity(this.xSpeed, this.ySpeed).visible = false;
+        return this.bullet;
         console.log('Bullet Created');
     }
 
