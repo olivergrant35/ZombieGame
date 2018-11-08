@@ -96,6 +96,8 @@ function create () {
     bullets = this.physics.add.group();
     this.physics.add.collider(bullets, worldLayer);
 
+    console.log(this.physics.collide);
+
     //Creating enemies group and setting collider for the world layer.
     enemies = this.physics.add.group({
 
@@ -172,6 +174,7 @@ function create () {
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
     moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money: 0', { fontSize: '40px', fill: '#ffffff'});
+    
 
     console.log("Create Complete");
 }
@@ -180,7 +183,7 @@ function create () {
         player.sprite.setVelocity(0);
         if (running) {
             //Rotates the player to face the crosshair.
-            player.sprite.rotation = Phaser.Math.Angle.Between(player.x, player.y, crosshair.x, crosshair.y);
+            player.sprite.rotation = Phaser.Math.Angle.Between(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
 
             if (left.isDown) {
                 player.left();
@@ -233,8 +236,9 @@ function create () {
             //Making the crosshair and score text move with the player.
             crosshair.body.velocity.x = player.sprite.body.velocity.x;
             crosshair.body.velocity.y = player.sprite.body.velocity.y;
-            moneyText.x = player.sprite.x - 390;
-            moneyText.y = player.sprite.y - 295;
+            const camera = this.cameras.main;
+            moneyText.x = camera.x;
+            moneyText.y = camera.y;
 
             constrainCrosshair(crosshair, 275);
         }
@@ -250,6 +254,11 @@ function create () {
         {
 
         }
+    }
+
+    function destroyBullet()
+    {
+        console.log("Destroy Bullet: ");
     }
 
 

@@ -25,7 +25,7 @@ class Player {
     {
         this.money += 5;
         moneyText.setText('Money: ' + this.money);
-    }
+    }    
 
     up()
     {
