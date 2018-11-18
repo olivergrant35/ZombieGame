@@ -6,12 +6,12 @@ class Player {
 
         this.playerSpeed = 200;
         this.playerHealth = 100;
-        this.money = 0;
+        this.money = 0;        
         this.sprite = playerSprite;
-    }
+    }    
 
-    hitByEnemy(damage)
-    {
+    hitByEnemy()
+    {            
         this.playerHealth -= damage;
         if(this.playerHealth <= 0)
         {

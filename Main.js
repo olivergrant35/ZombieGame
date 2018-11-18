@@ -22,7 +22,7 @@ let config = {
 let phaser = new Phaser.Game(config);
 let game;
 let world;
-let running = true;
+let running = false;
 let gameOver = false;
 let player;
 let crosshair;
@@ -30,6 +30,8 @@ let map;
 let worldLayer;
 let bullets;
 let bulletSpeed = 500;
+let zombies;
+let zombieSpeed = 250; 
 let shootTime = 0;
 let shotInterval = 150;
 let enemies;
@@ -38,6 +40,8 @@ let particles;
 let emitter;
 
 let moneyText;
+
+let damage = 5;
 
 let up;
 let down;
@@ -90,20 +94,19 @@ function create () {
     const spawnPoint = map.findObject("Objects", obj => obj.name === "Spawn Point");
     //player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, 'playerHandgun');
     player = new Player(this, spawnPoint.x, spawnPoint.y);
-    this.physics.add.collider(player.sprite, worldLayer);
+    this.physics.add.collider(player.sprite, worldLayer, player.hitByEnemy, null, this);
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
-    this.physics.add.collider(bullets, worldLayer);
-
-    console.log(this.physics.collide);
+    this.physics.add.collider(bullets, worldLayer, destroyBullet, null, this);
 
     //Creating enemies group and setting collider for the world layer.
     enemies = this.physics.add.group({
 
     });
+
     this.physics.add.collider(enemies, worldLayer);
-    this.physics.add.collider(player.sprite, enemies, player.hitByEnemy(5), null, this);
+    //this.physics.add.collider(player.sprite, enemies, player.hitByEnemy, null, this);
 
     //Adding the crosshair to the screen.
     crosshair = this.physics.add.sprite(450, 300, 'crosshairImage');
@@ -157,11 +160,6 @@ function create () {
                 this.ySpeed = bulletSpeed * Math.sin(angle);
 
                 bullets.create(player.sprite.x, player.sprite.y, 'bullet').setVelocity(this.xSpeed, this.ySpeed);
-
-                // bullets.getChildren().forEach(b => {
-                //    if(!b.isUsed)
-                //        b.shootBullet(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
-                // });
                 shootTime = this.time.now + shotInterval;
             }
         }
@@ -173,8 +171,7 @@ function create () {
     left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money: 0', { fontSize: '40px', fill: '#ffffff'});
-    
+    moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money:0', { fontSize: '40px', fill: '#ffffff'});
 
     console.log("Create Complete");
 }
@@ -236,9 +233,31 @@ function create () {
             //Making the crosshair and score text move with the player.
             crosshair.body.velocity.x = player.sprite.body.velocity.x;
             crosshair.body.velocity.y = player.sprite.body.velocity.y;
-            const camera = this.cameras.main;
-            moneyText.x = camera.x;
-            moneyText.y = camera.y;
+            //Making moneyText stay at the top left of the screen. Might change "money" to coin icon.
+            if(player.sprite.x < 400)
+            {
+                moneyText.x = 10;
+            }else
+            {
+                moneyText.x =player.sprite.x - 390;
+            }
+
+            if(player.sprite.y < 300)
+            {
+                moneyText.y = 10;
+            }else
+            {
+                moneyText.y = player.sprite.y - 290;
+            }
+
+            //Want to make it so money changes opacity if its covering player.
+            if(player.sprite.x < moneyText.width + 20 && player.sprite.y < moneyText.height + 20)
+            {
+                moneyText.alpha = 0.5;
+            }else
+            {
+                moneyText.alpha = 1;
+            }
 
             constrainCrosshair(crosshair, 275);
         }
@@ -247,6 +266,11 @@ function create () {
             //Game is paused so need to create a menu of sorts
             crosshair.setVelocity(0);
             emitter.visible = false;
+
+            //show start menu
+            let graphics = this.add.graphics();
+            graphics.lineStyle(2, 0xFFFFFF, 1);
+            graphics.fillRect(200, 200, 200, 100);
         }
 
         //Game over
@@ -256,9 +280,11 @@ function create () {
         }
     }
 
-    function destroyBullet()
+    function destroyBullet(bullet)
     {
-        console.log("Destroy Bullet: ");
+        //Bullet hit worldLayer.
+        console.log("Bullet hit world layer, destroy bullet");
+        bullet.destroy();
     }
 
 
