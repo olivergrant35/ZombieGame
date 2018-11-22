@@ -5,20 +5,22 @@ class Player {
         playerSprite.setCollideWorldBounds(true);
 
         this.playerSpeed = 200;
-        this.playerHealth = 100;
-        this.money = 0;        
         this.sprite = playerSprite;
     }    
 
     hitByEnemy()
-    {            
-        this.playerHealth -= damage;
-        if(this.playerHealth <= 0)
+    {
+        if(game.time.now > hitTime)
         {
-            //Player is dead so stopping game and setting gameOver to true;
-            running = false;
-            gameOver = true;
-        }
+            playerHealth -= damage;
+            if(playerHealth <= 0)
+            {
+                //Player is dead so stopping game and setting gameOver to true;
+                running = false;
+                gameOver = true;
+            }
+            hitTime = game.time.now + hitInterval;
+        }        
     }
 
     enemyKilled()

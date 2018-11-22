@@ -30,18 +30,27 @@ let map;
 let worldLayer;
 let bullets;
 let bulletSpeed = 500;
-let zombies;
-let zombieSpeed = 250; 
 let shootTime = 0;
 let shotInterval = 150;
-let enemies;
-let enemySpeed = 300;
 let particles;
 let emitter;
+let menuDrawn = false;
+
+let enemies;
+let enemySpeed = 220;
+let lastSpawned = 0;
+let spawnInterval = 1000;
 
 let moneyText;
+let playButton;
+let exitButton;
 
 let damage = 5;
+
+let playerHealth = 100;
+let money = 0;
+let hitTime = 0;
+let hitInterval = 250;
 
 let up;
 let down;
@@ -53,6 +62,7 @@ function preload ()
     console.log("Preload");
 
     game = this;
+    graphics = game.add.graphics();
 
     //Load the player, bullet and crosshair images.
     this.load.image('playerHandgun', 'assets/player/soldier_handgun.png');
@@ -94,19 +104,17 @@ function create () {
     const spawnPoint = map.findObject("Objects", obj => obj.name === "Spawn Point");
     //player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, 'playerHandgun');
     player = new Player(this, spawnPoint.x, spawnPoint.y);
-    this.physics.add.collider(player.sprite, worldLayer, player.hitByEnemy, null, this);
+    this.physics.add.collider(player.sprite, worldLayer);
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
     this.physics.add.collider(bullets, worldLayer, destroyBullet, null, this);
 
     //Creating enemies group and setting collider for the world layer.
-    enemies = this.physics.add.group({
-
-    });
-
+    enemies = this.physics.add.group();
     this.physics.add.collider(enemies, worldLayer);
-    //this.physics.add.collider(player.sprite, enemies, player.hitByEnemy, null, this);
+    this.physics.add.collider(bullets, enemies, killEnemy, null, this);
+    this.physics.add.collider(player.sprite, enemies, player.hitByEnemy, null, this);
 
     //Adding the crosshair to the screen.
     crosshair = this.physics.add.sprite(450, 300, 'crosshairImage');
@@ -124,7 +132,10 @@ function create () {
     //mouse pointer code was taken from https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     // Locks pointer on mousedown
     phaser.canvas.addEventListener('mousedown', function () {
-        game.input.mouse.requestPointerLock();
+        if(running)
+        {
+            game.input.mouse.requestPointerLock();
+        }        
     });
 
     // Exit pointer lock when Q or escape (by default) is pressed.
@@ -172,15 +183,21 @@ function create () {
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
     moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money:0', { fontSize: '40px', fill: '#ffffff'});
-
+    playButton = this.add.text(player.sprite.x - 85, player.sprite.y - 100, 'Play', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => startGame());
+    exitButton = this.add.text(player.sprite.x - 150, player.sprite.y + 50, 'Restart', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => restartGame());
+    
     console.log("Create Complete");
 }
 
     function update() {
-        player.sprite.setVelocity(0);
+        player.sprite.setVelocity(0);        
         if (running) {
             //Rotates the player to face the crosshair.
             player.sprite.rotation = Phaser.Math.Angle.Between(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
+
+            menuDrawn = false;
+            playButton.alpha = 0;
+            exitButton.alpha = 0;
 
             if (left.isDown) {
                 player.left();
@@ -212,6 +229,17 @@ function create () {
                 emitter.visible = false;
             }
 
+            //Spawn enemies
+            if(this.time.now > lastSpawned)
+            {
+                let x = Math.random() * (750 - 50) + 50;
+                let y = Math.random() * (550 - 50) + 50;
+                
+                enemies.create(x, y, 'zombie');
+
+                lastSpawned = this.time.now + spawnInterval;
+            }
+
             //Updating enemy movement
             enemies.getChildren().forEach(enemy => {
                 if (enemy.active == true && enemy.visible == true) {
@@ -224,6 +252,8 @@ function create () {
 
                     enemy.body.velocity.x = xSpeed;
                     enemy.body.velocity.y = ySpeed;
+
+                    enemy.rotation = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.sprite.x, player.sprite.y);
                 }
             })
 
@@ -239,7 +269,7 @@ function create () {
                 moneyText.x = 10;
             }else
             {
-                moneyText.x =player.sprite.x - 390;
+                moneyText.x = player.sprite.x - 390;
             }
 
             if(player.sprite.y < 300)
@@ -257,7 +287,7 @@ function create () {
             }else
             {
                 moneyText.alpha = 1;
-            }
+            }            
 
             constrainCrosshair(crosshair, 275);
         }
@@ -267,10 +297,22 @@ function create () {
             crosshair.setVelocity(0);
             emitter.visible = false;
 
-            //show start menu
-            let graphics = this.add.graphics();
-            graphics.lineStyle(2, 0xFFFFFF, 1);
-            graphics.fillRect(200, 200, 200, 100);
+            enemies.getChildren().forEach(enemy => {
+                if (enemy.active == true && enemy.visible == true) {
+                    enemy.body.velocity.x = 0;
+                    enemy.body.velocity.y = 0;
+                }
+            })
+
+            if(menuDrawn == false)
+            {
+                game.input.mouse.releasePointerLock();
+                playButton.setPosition(player.sprite.x - 85, player.sprite.y - 100);
+                playButton.alpha = 1;
+                exitButton.setPosition(player.sprite.x - 150, player.sprite.y + 50);
+                exitButton.alpha = 1;
+                menuDrawn = true;
+            }
         }
 
         //Game over
@@ -285,6 +327,26 @@ function create () {
         //Bullet hit worldLayer.
         console.log("Bullet hit world layer, destroy bullet");
         bullet.destroy();
+    }
+
+    function killEnemy(bullet, enemy)
+    {
+        money += 2;
+        moneyText.setText("Money:" + money);
+        bullet.destroy();
+        enemy.destroy();
+    }
+
+    function startGame()
+    {
+        running = true;
+        game.input.mouse.requestPointerLock();
+    }
+
+    function restartGame()
+    {
+        //Find how to refresh the page so the game restarts.
+        window.location.reload();
     }
 
 
