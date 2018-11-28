@@ -23,6 +23,7 @@ let phaser = new Phaser.Game(config);
 let game;
 let world;
 let running = false;
+let shop = false;
 let gameOver = false;
 let player;
 let crosshair;
@@ -154,8 +155,13 @@ function create () {
         }
     }, this);
 
+    //Key to pause game
     this.input.keyboard.on('keydown_P', function (event){
         running = !running;
+    });
+
+    this.input.keyboard.on("keydown_C", function(event){
+        
     });
 
     //Detecting mouse click, creating and shooting a bullet.
@@ -232,8 +238,8 @@ function create () {
             //Spawn enemies
             if(this.time.now > lastSpawned)
             {
-                let x = Math.random() * (750 - 50) + 50;
-                let y = Math.random() * (550 - 50) + 50;
+                let x = Math.floor(Math.random() * 3000) + 200;
+                let y = Math.floor(Math.random() * 3000) + 200;
                 
                 enemies.create(x, y, 'zombie');
 
@@ -291,18 +297,13 @@ function create () {
 
             constrainCrosshair(crosshair, 275);
         }
-        else
+        else if(running == false && shop == false && gameOver == false)
         {
             //Game is paused so need to create a menu of sorts
             crosshair.setVelocity(0);
             emitter.visible = false;
 
-            enemies.getChildren().forEach(enemy => {
-                if (enemy.active == true && enemy.visible == true) {
-                    enemy.body.velocity.x = 0;
-                    enemy.body.velocity.y = 0;
-                }
-            })
+            stopEnemies();
 
             if(menuDrawn == false)
             {
@@ -314,12 +315,40 @@ function create () {
                 menuDrawn = true;
             }
         }
-
-        //Game over
-        if(gameOver)
+        else if(running == false && shop == true && gameOver == false)
         {
+            //Need to display shop menu
+            crosshair.setVelocity(0);
+            emitter.visible = false;
 
+            stopEnemies();
         }
+        else if(gameOver)
+        {
+            //Need to display game over menu
+            crosshair.setVelocity(0);
+            emitter.visible = false;
+
+            stopEnemies();
+
+            if(menuDrawn == false)
+            {                
+                exitButton.setPosition(player.sprite.x - 150, player.sprite.y);
+                exitButton.alpha = 1;
+                menuDrawn = true;
+            }
+            game.input.mouse.releasePointerLock();
+        }
+    }
+
+    function stopEnemies()
+    {
+        enemies.getChildren().forEach(enemy => {
+            if (enemy.active == true && enemy.visible == true) {
+                enemy.body.velocity.x = 0;
+                enemy.body.velocity.y = 0;
+            }
+        })
     }
 
     function destroyBullet(bullet)
