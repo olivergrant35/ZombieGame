@@ -53,6 +53,8 @@ let money = 0;
 let hitTime = 0;
 let hitInterval = 250;
 
+let pistolShotSound;
+
 let up;
 let down;
 let left;
@@ -73,6 +75,9 @@ function preload ()
 
     //Loading enemy images.
     this.load.image('zombie', 'assets/enimies/zombie.png');
+
+    //Loading siund files
+    this.load.audio('9mmShot', 'assets/sounds/9mmPistolShot.wav');
 
     //Loading map tiles and export from Tiled.
     this.load.image("tiles", "assets/world/tilemap/tilemap.png");
@@ -106,6 +111,9 @@ function create () {
     //player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, 'playerHandgun');
     player = new Player(this, spawnPoint.x, spawnPoint.y);
     this.physics.add.collider(player.sprite, worldLayer);
+
+    //Creating the pistol shot sound
+    pistolShotSound = this.sound.add('9mmShot');
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
@@ -169,6 +177,7 @@ function create () {
         if(running) {
             if(this.time.now > shootTime)
             {
+                pistolShotSound.play();
                 //Working out the x and y speed to move the bullet to the crosshair location.
                 let dx = crosshair.x - player.sprite.x;
                 let dy = crosshair.y - player.sprite.y;
