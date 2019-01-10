@@ -40,11 +40,24 @@ let menuDrawn = false;
 let enemies;
 let enemySpeed = 220;
 let lastSpawned = 0;
-let spawnInterval = 1000;
+let spawnInterval = 750;
+
+let coin;
+let medkit;
 
 let moneyText;
+let healthText; 
 let playButton;
 let exitButton;
+let difficultyButton;
+
+let difficulty = 2;
+
+let helpText1;
+let helpText2;
+
+let healButton;
+let slowZombiesButton;
 
 let damage = 5;
 
@@ -59,6 +72,8 @@ let up;
 let down;
 let left;
 let right;
+
+let camera;
 
 function preload ()
 {
@@ -75,6 +90,10 @@ function preload ()
 
     //Loading enemy images.
     this.load.image('zombie', 'assets/enimies/zombie.png');
+
+    //Loading coin and medkit image
+    this.load.image('coin', 'assets/world/coin.png');
+    this.load.image('medkit', 'assets/world/medkit.png');
 
     //Loading siund files
     this.load.audio('9mmShot', 'assets/sounds/9mmPistolShot.wav');
@@ -113,11 +132,15 @@ function create () {
     this.physics.add.collider(player.sprite, worldLayer);
 
     //Creating the pistol shot sound
-    pistolShotSound = this.sound.add('9mmShot');
+    pistolShotSound = this.sound.add('9mmShot', {volume: 0.1});
 
     //Creating bullets group and setting collider for the world layer.
     bullets = this.physics.add.group();
     this.physics.add.collider(bullets, worldLayer, destroyBullet, null, this);
+
+    //Adding coin and medkit to screen
+    coin = this.add.image(player.sprite.x -370, player.sprite.y - 270, 'coin');
+    medkit = this.add.image(player.sprite.x - 370, player.sprite.y - 210, 'medkit');
 
     //Creating enemies group and setting collider for the world layer.
     enemies = this.physics.add.group();
@@ -134,9 +157,9 @@ function create () {
     crosshair.setCollideWorldBounds(true);
 
     //Making the camera follow the player.
-    const camera = this.cameras.main;
+    camera = this.cameras.main;
     camera.startFollow(player.sprite);
-    camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+    camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);    
 
     //mouse pointer code was taken from https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
     // Locks pointer on mousedown
@@ -169,7 +192,8 @@ function create () {
     });
 
     this.input.keyboard.on("keydown_C", function(event){
-        
+        running = !running;    
+        shop = !shop;
     });
 
     //Detecting mouse click, creating and shooting a bullet.
@@ -197,15 +221,28 @@ function create () {
     left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    moneyText = this.add.text(player.sprite.x - 390, player.sprite.y - 290, 'Money:0', { fontSize: '40px', fill: '#ffffff'});
-    playButton = this.add.text(player.sprite.x - 85, player.sprite.y - 100, 'Play', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => startGame());
-    exitButton = this.add.text(player.sprite.x - 150, player.sprite.y + 50, 'Restart', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => restartGame());
-    
+    //Adding and positioning all of the text.
+    moneyText = this.add.text(camera.worldView.x, camera.worldView.y, '0', { fontSize: '40px', fill: '#ffffff'});
+    healthText = this.add.text(camera.worldView.x, camera.worldView.y, '100', { fontSize: '40px', fill: '#ffffff'});
+    playButton = this.add.text(camera.worldView.x, camera.worldView.y, 'Play', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => startGame());
+    exitButton = this.add.text(camera.worldView.x, camera.worldView.y, 'Restart', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => restartGame());
+    difficultyButton = this.add.text(0, 0, 'Difficulty: Medium', {fontSize: '50px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => changeDifficulty());
+
+    healButton = this.add.text(0, 0, 'Heal: 100 Coins', {fontSize: '30px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => healPlayer());
+    slowZombiesButton = this.add.text(0, 0, 'Slow Zombies: 500 Coins', {fontSize: '30px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => slowZombies());
+
+    helpText1 = this.add.text(camera.worldView.x, camera.worldView.y, 'Press "P" to pause', {fontSize: '20px', fill: '#ffffff'});
+    helpText2 = this.add.text(camera.worldView.x, camera.worldView.y, 'Press "C" to open shop', {fontSize: '20px', fill: '#ffffff'});
+
+    //Making sure the icons are on top of everything.
+    coin.setDepth(1);
+    medkit.setDepth(1); 
+
     console.log("Create Complete");
 }
 
     function update() {
-        player.sprite.setVelocity(0);        
+        player.sprite.setVelocity(0);
         if (running) {
             //Rotates the player to face the crosshair.
             player.sprite.rotation = Phaser.Math.Angle.Between(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
@@ -213,6 +250,9 @@ function create () {
             menuDrawn = false;
             playButton.alpha = 0;
             exitButton.alpha = 0;
+            difficultyButton.alpha = 0;
+            healButton.alpha = 0; 
+            slowZombiesButton.alpha = 0;
 
             if (left.isDown) {
                 player.left();
@@ -278,30 +318,63 @@ function create () {
             //Making the crosshair and score text move with the player.
             crosshair.body.velocity.x = player.sprite.body.velocity.x;
             crosshair.body.velocity.y = player.sprite.body.velocity.y;
-            //Making moneyText stay at the top left of the screen. Might change "money" to coin icon.
-            if(player.sprite.x < 400)
-            {
-                moneyText.x = 10;
-            }else
-            {
-                moneyText.x = player.sprite.x - 390;
-            }
+            //Making moneyText, healthtext and icons stay at the top left of screen. 
+            moneyText.x = camera.worldView.x + 60;
+            moneyText.y = camera.worldView.y + 15;
+            healthText.x = camera.worldView.x + 60;
+            healthText.y = camera.worldView.y + 73;
+            coin.x = camera.worldView.x + 30;
+            coin.y = camera.worldView.y + 30;
+            medkit.x = camera.worldView.x + 30;
+            medkit.y = camera.worldView.y + 90; 
 
-            if(player.sprite.y < 300)
-            {
-                moneyText.y = 10;
-            }else
-            {
-                moneyText.y = player.sprite.y - 290;
-            }
+            helpText1.x = camera.worldView.x + 570;
+            helpText1.y = camera.worldView.y + 15;
+            helpText2.x = camera.worldView.x + 520;
+            helpText2.y = camera.worldView.y + 35;
+
+            //Old code used to make text and icons stay at top left. Now using camera location. 
+            // if(player.sprite.x < 400)
+            // {
+            //     moneyText.x = 60;
+            //     healthText.x = 60;
+            //     coin.x = 30; 
+            //     medkit.x = 30; 
+            // }else
+            // {
+            //     moneyText.x = player.sprite.x - 340;
+            //     healthText.x = player.sprite.x - 340;
+            //     coin.x = player.sprite.x - 370;
+            //     medkit.x = player.sprite.x - 370;
+            // }
+
+            // if(player.sprite.y < 300)
+            // {
+            //     moneyText.y = 10;
+            //     healthText.y = 73;
+            //     coin.y = 30; 
+            //     medkit.y = 90;
+            // }else
+            // {
+            //     moneyText.y = player.sprite.y - 285;
+            //     healthText.y = player.sprite.y - 227;
+            //     coin.y = player.sprite.y - 270; 
+            //     medkit.y = player.sprite.y - 210; 
+            // }
 
             //Want to make it so money changes opacity if its covering player.
-            if(player.sprite.x < moneyText.width + 20 && player.sprite.y < moneyText.height + 20)
+            if(player.sprite.x < moneyText.x + 85 && player.sprite.y < healthText.y + 70)
             {
                 moneyText.alpha = 0.5;
+                healthText.alpha = 0.5;
+                coin.alpha = 0.5;
+                medkit.alpha = 0.5; 
             }else
             {
                 moneyText.alpha = 1;
+                healthText.alpha = 1;
+                coin.alpha = 1;
+                medkit.alpha = 1; 
             }            
 
             constrainCrosshair(crosshair, 275);
@@ -321,6 +394,8 @@ function create () {
                 playButton.alpha = 1;
                 exitButton.setPosition(player.sprite.x - 150, player.sprite.y + 50);
                 exitButton.alpha = 1;
+                difficultyButton.setPosition(player.sprite.x - 300, player.sprite.y + 200);
+                difficultyButton.alpha = 1;
                 menuDrawn = true;
             }
         }
@@ -331,6 +406,17 @@ function create () {
             emitter.visible = false;
 
             stopEnemies();
+
+            if(menuDrawn == false)
+            {
+                //Display shop
+                game.input.mouse.releasePointerLock();
+                healButton.setPosition(player.sprite.x - 120, player.sprite.y - 200);
+                healButton.alpha = 1;
+                slowZombiesButton.setPosition(player.sprite.x - 190, player.sprite.y - 100);
+                slowZombiesButton.alpha = 1;
+                menuDrawn = true;
+            }            
         }
         else if(gameOver)
         {
@@ -370,7 +456,7 @@ function create () {
     function killEnemy(bullet, enemy)
     {
         money += 2;
-        moneyText.setText("Money:" + money);
+        moneyText.setText(money);
         bullet.destroy();
         enemy.destroy();
     }
@@ -385,6 +471,59 @@ function create () {
     {
         //Find how to refresh the page so the game restarts.
         window.location.reload();
+    }
+
+    function healPlayer()
+    {
+        if(money >= 100)
+        {
+            money = money - 100; 
+            playerHealth = 100;
+            moneyText.setText(money);
+            healthText.setText(playerHealth);
+        }
+    }
+
+    function slowZombies()
+    {
+        if(money >= 500)
+        {
+            money = money - 500;
+            moneyText.setText(money);
+            enemySpeed = 200;
+        }        
+    }
+
+    //Difficulties 1 = 1000 (Easy); 2 = 750 (Medium); 3 = 500 (HARD); 4 = 250 (Impossible)
+    function changeDifficulty()
+    {
+        if(difficulty == 1)
+        {
+            difficulty = 2; 
+            spawnInterval = 1000;
+            difficultyButton.setText("Difficulty: Easy");
+        }
+        else if(difficulty == 2)
+        {
+            difficulty = 3;
+            spawnInterval = 750;
+            difficultyButton.setText("Difficulty: Medium");
+        }
+        else if(difficulty == 3)
+        {
+            difficulty = 4;
+            spawnInterval = 500;
+            difficultyButton.setText("Difficulty: Hard");
+        }
+        else if(difficulty == 4)
+        {
+            difficulty = 1;
+            spawnInterval = 250;
+            difficultyButton.setText("Difficulty: Impossible");
+        }
+        else{
+            difficulty = 1;
+        }        
     }
 
 

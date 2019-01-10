@@ -11,15 +11,19 @@ class Player {
     hitByEnemy()
     {
         if(game.time.now > hitTime)
-        {
-            playerHealth -= damage;
+        {            
             if(playerHealth <= 0)
             {
                 //Player is dead so stopping game and setting gameOver to true;
                 running = false;
                 gameOver = true;
             }
+            else
+            {
+                playerHealth -= damage;
+            }
             hitTime = game.time.now + hitInterval;
+            healthText.setText(playerHealth);
         }        
     }
 
