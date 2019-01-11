@@ -25,6 +25,7 @@ let world;
 let running = false;
 let shop = false;
 let gameOver = false;
+let paused = false;
 let player;
 let crosshair;
 let map;
@@ -53,6 +54,7 @@ let difficultyButton;
 
 let difficulty = 2;
 
+let killsText;
 let helpText1;
 let helpText2;
 
@@ -67,6 +69,8 @@ let hitTime = 0;
 let hitInterval = 250;
 
 let pistolShotSound;
+
+let kills = 0; 
 
 let up;
 let down;
@@ -188,12 +192,20 @@ function create () {
 
     //Key to pause game
     this.input.keyboard.on('keydown_P', function (event){
-        running = !running;
+        if(!gameOver && !shop)
+        {
+            running = !running; 
+            shop = false;  
+            paused = !paused;
+        }        
     });
 
     this.input.keyboard.on("keydown_C", function(event){
-        running = !running;    
-        shop = !shop;
+        if(!gameOver && !paused)
+        {
+            running = !running;
+            shop = !shop;
+        }
     });
 
     //Detecting mouse click, creating and shooting a bullet.
@@ -222,21 +234,28 @@ function create () {
     right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
     //Adding and positioning all of the text.
-    moneyText = this.add.text(camera.worldView.x, camera.worldView.y, '0', { fontSize: '40px', fill: '#ffffff'});
-    healthText = this.add.text(camera.worldView.x, camera.worldView.y, '100', { fontSize: '40px', fill: '#ffffff'});
-    playButton = this.add.text(camera.worldView.x, camera.worldView.y, 'Play', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => startGame());
-    exitButton = this.add.text(camera.worldView.x, camera.worldView.y, 'Restart', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => restartGame());
+    moneyText = this.add.text(0, 0, '0', { fontSize: '40px', fill: '#ffffff'});
+    healthText = this.add.text(0, 0, '100', { fontSize: '40px', fill: '#ffffff'});
+    playButton = this.add.text(0, 0, 'Play', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => startGame());
+    exitButton = this.add.text(0, 0, 'Restart', { fontSize: '70px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => restartGame());
     difficultyButton = this.add.text(0, 0, 'Difficulty: Medium', {fontSize: '50px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => changeDifficulty());
 
     healButton = this.add.text(0, 0, 'Heal: 100 Coins', {fontSize: '30px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => healPlayer());
     slowZombiesButton = this.add.text(0, 0, 'Slow Zombies: 500 Coins', {fontSize: '30px', fill: '#ffffff'}).setInteractive().on('pointerdown', () => slowZombies());
 
-    helpText1 = this.add.text(camera.worldView.x, camera.worldView.y, 'Press "P" to pause', {fontSize: '20px', fill: '#ffffff'});
-    helpText2 = this.add.text(camera.worldView.x, camera.worldView.y, 'Press "C" to open shop', {fontSize: '20px', fill: '#ffffff'});
+    helpText1 = this.add.text(0, 0, 'Press "P" to pause', {fontSize: '20px', fill: '#ffffff'});
+    helpText2 = this.add.text(0, 0, 'Press "C" to open shop', {fontSize: '20px', fill: '#ffffff'});
+    killsText = this.add.text(0, 0, 'Kills: 0', { fontSize: '30px', fill: '#ffffff'});
 
     //Making sure the icons are on top of everything.
     coin.setDepth(1);
     medkit.setDepth(1); 
+    moneyText.setDepth(1);
+    healthText.setDepth(1);
+    playButton.setDepth(1);
+    exitButton.setDepth(1);
+    difficultyButton.setDepth(1);
+    killsText.setDepth(1);
 
     console.log("Create Complete");
 }
@@ -333,6 +352,9 @@ function create () {
             helpText2.x = camera.worldView.x + 520;
             helpText2.y = camera.worldView.y + 35;
 
+            killsText.x = camera.worldView.x + 275;
+            killsText.y = camera.worldView.y + 15;
+
             //Old code used to make text and icons stay at top left. Now using camera location. 
             // if(player.sprite.x < 400)
             // {
@@ -411,9 +433,9 @@ function create () {
             {
                 //Display shop
                 game.input.mouse.releasePointerLock();
-                healButton.setPosition(player.sprite.x - 120, player.sprite.y - 200);
+                healButton.setPosition(camera.worldView.x + 275, camera.worldView.y + 150);
                 healButton.alpha = 1;
-                slowZombiesButton.setPosition(player.sprite.x - 190, player.sprite.y - 100);
+                slowZombiesButton.setPosition(camera.worldView.x + 210, camera.worldView.y + 230);
                 slowZombiesButton.alpha = 1;
                 menuDrawn = true;
             }            
@@ -430,6 +452,8 @@ function create () {
             {                
                 exitButton.setPosition(player.sprite.x - 150, player.sprite.y);
                 exitButton.alpha = 1;
+                killsText.setPosition(camera.worldView.x + 245, camera.worldView.y + 150);
+                killsText.setText("You got " + kills + " kills!");
                 menuDrawn = true;
             }
             game.input.mouse.releasePointerLock();
@@ -456,6 +480,8 @@ function create () {
     function killEnemy(bullet, enemy)
     {
         money += 2;
+        kills += 1;
+        killsText.setText("Kills: " + kills);
         moneyText.setText(money);
         bullet.destroy();
         enemy.destroy();
@@ -490,11 +516,18 @@ function create () {
         {
             money = money - 500;
             moneyText.setText(money);
-            enemySpeed = 200;
+            if(enemySpeed == 220)
+            {
+                enemySpeed = 200;
+            }
+            else if(enemySpeed == 200)
+            {
+                enemySpeed = 190;
+            }
         }        
     }
 
-    //Difficulties 1 = 1000 (Easy); 2 = 750 (Medium); 3 = 500 (HARD); 4 = 250 (Impossible)
+    //Difficulties 1 = 1000 (Easy); 2 = 750 (Medium); 3 = 250 (HARD); 4 = 100 (Impossible)
     function changeDifficulty()
     {
         if(difficulty == 1)
@@ -512,13 +545,13 @@ function create () {
         else if(difficulty == 3)
         {
             difficulty = 4;
-            spawnInterval = 500;
+            spawnInterval = 250;
             difficultyButton.setText("Difficulty: Hard");
         }
         else if(difficulty == 4)
         {
             difficulty = 1;
-            spawnInterval = 250;
+            spawnInterval = 100;
             difficultyButton.setText("Difficulty: Impossible");
         }
         else{
@@ -526,13 +559,11 @@ function create () {
         }        
     }
 
-
-//BELOW CODE WAS GOT FROM https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_targetFocus.js
+    //Keeps the crosshair in a certain range of the player 
     function constrainCrosshair(crosshair, radius) {
-        let distX = crosshair.x - player.sprite.x; // X distance between player & crosshair
-        let distY = crosshair.y - player.sprite.y; // Y distance between player & crosshair
+        let distX = crosshair.x - player.sprite.x;
+        let distY = crosshair.y - player.sprite.y;
 
-        // Ensures crosshair cannot be moved crosshair
         if (distX > 800)
             crosshair.x = player.sprite.x + 800;
         else if (distX < -800)
@@ -543,10 +574,8 @@ function create () {
         else if (distY < -600)
             crosshair.y = player.sprite.y - 600;
 
-        // Ensures crosshair cannot be moved further than dist(radius) from player
         let distBetween = Phaser.Math.Distance.Between(player.sprite.x, player.sprite.y, crosshair.x, crosshair.y);
         if (distBetween > radius) {
-            // Place crosshair on perimeter of circle on line intersecting player & crosshair
             let scale = distBetween / radius;
 
             crosshair.x = player.sprite.x + (crosshair.x - player.sprite.x) / scale;
